@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import kotlinx.coroutines.launch
 
 import android.content.Intent
@@ -210,7 +211,7 @@ fun MainContent(
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.headlineMedium
                 )
-                Divider()
+                HorizontalDivider()
                 assistants.forEach { assistant ->
                     NavigationDrawerItem(
                         label = { Text(assistant.name) },
