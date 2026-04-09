@@ -41,7 +41,7 @@ interface VGHDao {
     suspend fun deletePrompt(prompt: VGHQuickPrompt)
 }
 
-@Database(entities = [VGHNote::class, VGHQuickPrompt::class], version = 1)
+@Database(entities = [VGHNote::class, VGHQuickPrompt::class], version = 1, exportSchema = false)
 abstract class VGHDatabase : RoomDatabase() {
     abstract fun vghDao(): VGHDao
 }
