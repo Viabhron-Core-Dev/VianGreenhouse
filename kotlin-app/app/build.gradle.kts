@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.foss.aihub"
+    namespace = "com.foss.viangreenhouse"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.foss.aihub"
+        applicationId = "com.foss.viangreenhouse"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

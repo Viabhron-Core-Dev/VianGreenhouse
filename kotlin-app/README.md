@@ -23,8 +23,8 @@ This project is configured for **GitHub Actions**. When you push this code to a 
 ## File Structure
 - `app/build.gradle.kts`: Project dependencies and configuration.
 - `app/src/main/AndroidManifest.xml`: App permissions and activity declaration.
-- `app/src/main/java/com/foss/aihub/MainActivity.kt`: The main entry point and UI logic.
-- `app/src/main/java/com/foss/aihub/models/Assistant.kt`: Data model for the AI assistants.
+- `app/src/main/java/com/foss/viangreenhouse/MainActivity.kt`: The main entry point and UI logic.
+- `app/src/main/java/com/foss/viangreenhouse/models/Assistant.kt`: Data model for the AI assistants.
 - `gradle/libs.versions.toml`: Version catalog for dependencies.
 
 ## Note

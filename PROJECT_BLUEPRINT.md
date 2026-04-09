@@ -24,7 +24,7 @@ This file serves as a comprehensive map and architectural overview of the projec
 │   ├── app/                # Application module
 │   │   ├── src/main/
 │   │   │   ├── java/       # Kotlin source code
-│   │   │   │   └── com/foss/aihub/
+│   │   │   │   └── com/foss/viangreenhouse/
 │   │   │   │       ├── MainActivity.kt    # Main UI entry point
 │   │   │   │       ├── db/                # Room Database
 │   │   │   │       ├── models/            # Data entities
