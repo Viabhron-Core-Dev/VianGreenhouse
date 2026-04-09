@@ -1,10 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { motion } from 'motion/react';
 import { Send, User, Bot, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { Message } from '../types';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export function GeminiChat() {
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -37,18 +34,27 @@ export function GeminiChat() {
     setIsLoading(true);
 
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          ...messages.map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }],
-          })),
-          { role: 'user', parts: [{ text: userMessage.content }] }
-        ],
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            ...messages.map(m => ({
+              role: m.role === 'user' ? 'user' : 'model',
+              parts: [{ text: m.content }],
+            })),
+            { role: 'user', parts: [{ text: userMessage.content }] }
+          ],
+        }),
       });
 
-      const text = response.text || 'No response received.';
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response from server');
+      }
+
+      const data = await response.json();
+      const text = data.text || 'No response received.';
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
