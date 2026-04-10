@@ -37,10 +37,10 @@ fun VGHGridMenu(
     onNavigateToSettings: () -> Unit
 ) {
     val menuItems = listOf(
-        GridMenuItem("Notes", Icons.Default.NoteAlt, Color(0xFF4CAF50), onNavigateToNotes),
-        GridMenuItem("Prompts", Icons.Default.Terminal, Color(0xFF2196F3), onNavigateToPrompts),
-        GridMenuItem("Bridge", Icons.Default.Hub, Color(0xFFFF9800), onNavigateToBridge),
-        GridMenuItem("Settings", Icons.Default.Settings, Color(0xFF9E9E9E), onNavigateToSettings)
+        GridMenuItem("Notes", Icons.Default.NoteAlt, MaterialTheme.colorScheme.primary, onNavigateToNotes),
+        GridMenuItem("Prompts", Icons.Default.Terminal, MaterialTheme.colorScheme.secondary, onNavigateToPrompts),
+        GridMenuItem("Bridge", Icons.Default.Hub, Color(0xFF10B981), onNavigateToBridge),
+        GridMenuItem("Settings", Icons.Default.Settings, Color(0xFF94A3B8), onNavigateToSettings)
     )
 
     ModalBottomSheet(

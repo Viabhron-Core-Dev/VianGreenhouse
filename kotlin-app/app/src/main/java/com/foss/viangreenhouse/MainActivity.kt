@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.foss.viangreenhouse.models.Assistant
 import com.foss.viangreenhouse.models.defaultAssistants
 import com.foss.viangreenhouse.models.TabType
@@ -23,6 +24,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.text.style.TextOverflow
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.BasicTextField
@@ -34,11 +40,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import kotlinx.coroutines.launch
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.activity.result.contract.ActivityResultContracts
-
 import androidx.room.Room
 import com.foss.viangreenhouse.db.VGHDatabase
 import com.foss.viangreenhouse.db.VGHQuickPrompt
@@ -47,38 +48,20 @@ import java.util.UUID
 import com.foss.viangreenhouse.ui.theme.AIHubTheme
 
 class MainActivity : ComponentActivity() {
-    private lateinit var pillManager: VGHPillManager
     private lateinit var db: VGHDatabase
-
-    private val overlayPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        if (Settings.canDrawOverlays(this)) {
-            // Permission granted, we can show the pill later
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        pillManager = VGHPillManager(this)
         db = Room.databaseBuilder(
             applicationContext,
             VGHDatabase::class.java, "vgh-database"
         ).build()
         
-        if (!Settings.canDrawOverlays(this)) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            overlayPermissionLauncher.launch(intent)
-        }
-
         setContent {
             AIHubTheme {
-                MainScreen(pillManager, db)
+                MainScreen(db)
             }
         }
     }
@@ -94,7 +77,7 @@ sealed class Screen {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(pillManager: VGHPillManager, db: VGHDatabase) {
+fun MainScreen(db: VGHDatabase) {
     val assistants = defaultAssistants
     var selectedAssistant by remember { mutableStateOf(assistants[0]) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -106,16 +89,6 @@ fun MainScreen(pillManager: VGHPillManager, db: VGHDatabase) {
     val prompts by db.vghDao().getAllPrompts().collectAsState(initial = emptyList())
     val notes by db.vghDao().getAllNotes().collectAsState(initial = emptyList())
 
-    LaunchedEffect(selectedAssistant, currentScreen) {
-        if (currentScreen == Screen.Main) {
-            pillManager.showPill(selectedAssistant.name) {
-                showGridMenu = true
-            }
-        } else {
-            pillManager.hidePill()
-        }
-    }
-
     when (currentScreen) {
         Screen.Main -> {
             MainContent(
@@ -123,7 +96,8 @@ fun MainScreen(pillManager: VGHPillManager, db: VGHDatabase) {
                 drawerState = drawerState,
                 assistants = assistants,
                 onAssistantSelected = { selectedAssistant = it },
-                onOpenMenu = { scope.launch { drawerState.open() } }
+                onOpenMenu = { scope.launch { drawerState.open() } },
+                onPillSwipeUp = { showGridMenu = true }
             )
         }
         Screen.Prompts -> {
@@ -198,7 +172,8 @@ fun MainContent(
     drawerState: DrawerState,
     assistants: List<Assistant>,
     onAssistantSelected: (Assistant) -> Unit,
-    onOpenMenu: () -> Unit
+    onOpenMenu: () -> Unit,
+    onPillSwipeUp: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -231,17 +206,35 @@ fun MainContent(
             topBar = {
                 Column {
                     TopAppBar(
-                        title = { Text(selectedAssistant.name) },
+                        title = { 
+                            Column {
+                                Text(
+                                    selectedAssistant.name,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                )
+                                Text(
+                                    "Vian Greenhouse",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
                         navigationIcon = {
                             IconButton(onClick = onOpenMenu) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
                         },
                         actions = {
-                            IconButton(onClick = { /* Refresh logic would go here */ }) {
+                            IconButton(onClick = { /* Refresh logic */ }) {
                                 Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                             }
-                        }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     )
                     if (selectedAssistant.tabType == TabType.RESEARCH) {
                         ResearchUrlBar(
@@ -255,9 +248,90 @@ fun MainContent(
                 }
             }
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
                 AIWebView(url = selectedAssistant.url)
+                
+                VGHPill(
+                    text = selectedAssistant.name,
+                    onSwipeUp = onPillSwipeUp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 12.dp)
+                )
             }
+        }
+    }
+}
+
+@Composable
+fun VGHPill(
+    text: String,
+    onSwipeUp: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var offsetY by remember { mutableStateOf(0f) }
+    
+    Box(
+        modifier = modifier
+            .offset { IntOffset(0, offsetY.roundToInt()) }
+            .width(110.dp)
+            .height(32.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
+                    )
+                )
+            )
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = {
+                        if (offsetY < -40) {
+                            onSwipeUp()
+                        }
+                        offsetY = 0f
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetY = (offsetY + dragAmount.y).coerceAtMost(0f)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(Color.White.copy(alpha = 0.8f))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text.uppercase(),
+                color = Color.White,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
